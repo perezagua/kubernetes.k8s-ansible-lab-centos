@@ -13,7 +13,7 @@
 
 - name: "Configure CRI-O repositories: devel:kubic:libcontainers:stable:cri-o"
   get_url:
-    url: https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}/{{ os_version }}/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo
+    url: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable:/cri-o:/{{ crio_version }}/{{ os_version }}/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo
     dest: /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo
     mode: "00644"
   tags:

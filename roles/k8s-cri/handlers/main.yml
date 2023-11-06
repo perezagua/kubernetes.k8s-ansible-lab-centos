@@ -1,0 +1,8 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: Restart CRI-O
+  systemd:
+    name: crio
+    state: restarted

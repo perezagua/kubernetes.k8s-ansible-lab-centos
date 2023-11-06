@@ -1,0 +1,22 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: Configure HTTP Proxy Environment
+  template:
+    src: templates/http_proxy.sh.j2
+    dest: /etc/profile.d/http_proxy.sh
+  tags:
+    - preinstall
+    - http_proxy
+
+- name: Configure HTTP Proxy for Package Manager
+  lineinfile:
+    dest: /etc/dnf/dnf.conf
+    regex: '^proxy='
+    line: 'proxy={{ http_proxy.url }}'
+    mode: 0644
+  when: http_proxy.enabled | bool
+  tags:
+    - preinstall
+    - http_proxy

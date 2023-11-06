@@ -1,0 +1,25 @@
+---
+apiVersion: operator.tigera.io/v1
+kind: Installation
+metadata:
+  name: default
+spec:
+  calicoNetwork:
+    bgp: Enabled
+    nodeAddressAutodetectionV4:
+      firstFound: false
+      kubernetes: NodeInternalIP
+    ipPools:
+      - blockSize: 26
+        cidr: {{ pod_network_cidr }}
+        encapsulation: IPIP
+        natOutgoing: Enabled
+        nodeSelector: all()
+---
+# This section configures the Calico API server.
+# For more information, see: https://projectcalico.docs.tigera.io/master/reference/installation/api#operator.tigera.io/v1.APIServer
+apiVersion: operator.tigera.io/v1
+kind: APIServer
+metadata:
+  name: default
+spec: {}

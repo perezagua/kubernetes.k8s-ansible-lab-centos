@@ -1,0 +1,13 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+- name: Copy HPE Private Root CA
+  copy:
+    src: files/HPE_PrivateRootCA.pem
+    dest: /etc/pki/ca-trust/source/anchors/
+    mode: 0444
+  notify:
+    - Update ca-trust
+  tags:
+    - preinstall
+    - pki

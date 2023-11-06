@@ -1,0 +1,47 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+# Create the kubernetes repository on all the nodes 
+# which will be used to download the packages:
+- name: "Add Kubernetes repository"
+  yum_repository:
+    name: kubernetes
+    description: Kubernetes
+    file: kubernetes
+    baseurl: "https://packages.cloud.google.com/yum/repos/kubernetes-el7-$basearch"
+    enabled: yes
+    gpgcheck: yes
+    gpgkey: 
+      - "https://packages.cloud.google.com/yum/doc/yum-key.gpg"
+      - "https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg"
+    exclude: ['kubelet', 'kubeadm', 'kubectl']
+  tags:
+    - install
+    - install_kubernetes
+
+#You will install these packages on all of your machines:
+#  - kubeadm: the command to bootstrap the cluster.
+#  - kubelet: the component that runs on all of the machines in your cluster 
+#             and does things like starting pods and containers.
+#  - kubectl: the command line util to talk to your cluster.
+- name: "Install Kubernetes packages"
+  dnf:
+    name: "{{ item }}-{{ k8s_version }}"
+    disable_excludes: kubernetes
+    state: installed
+    update_cache: yes
+  with_items: "{{ kubernetes_packages }}"
+  tags:
+    - install
+    - install_kubernetes
+
+- name: Configure kubectl autocompletion
+  when: "'kubectl' in kubernetes_packages"
+  lineinfile:
+    dest: '.bashrc'
+    regex: 'kubectl completion'
+    line: 'source <(kubectl completion bash)'
+  tags:
+    - install
+    - install_kubernetes

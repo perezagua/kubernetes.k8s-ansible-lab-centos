@@ -1,0 +1,116 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: "Configure CRI-O repositories: devel:kubic:libcontainers:stable"
+  get_url:
+    url: https://download.opensuse.org/repositories/devel:/kubic:/libcontainers:/stable/{{ os_version }}/devel:kubic:libcontainers:stable.repo
+    dest: /etc/yum.repos.d/devel:kubic:libcontainers:stable.repo
+    mode: "0644"
+  tags:
+    - install
+    - cri
+
+- name: "Configure CRI-O repositories: devel:kubic:libcontainers:stable:cri-o"
+  get_url:
+    url: https://download.opensuse.org/repositories/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}/{{ os_version }}/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo
+    dest: /etc/yum.repos.d/devel:kubic:libcontainers:stable:cri-o:{{ crio_version }}.repo
+    mode: "00644"
+  tags:
+    - install
+    - cri
+
+- name: "Install CRI-O"
+  dnf:
+    name:
+      - cri-o
+      - runc
+    state: latest
+    update_cache: yes
+  tags:
+    - install
+    - cri
+
+- name: "Create CRI-O folders"
+  file:
+    path: "{{ item }}"
+    mode: 0755
+    state: directory
+  with_items:
+    - /etc/crio/crio.conf.d
+    - /var/lib/crio
+  tags:
+    - install
+    - cri
+
+- name: "Configure CRI-O: Install seccomp profile"
+  copy:
+    src: files/seccomp.json
+    dest: /etc/crio/seccomp.json
+    owner: root
+    group: root
+    mode: 0644
+  tags:
+    - install
+    - cri
+  notify:
+    - Restart CRI-O
+
+- name: "Configure CRI-O: Configure daemon"
+  copy:
+    src: "files/{{ item }}"
+    dest: "/etc/crio/crio.conf.d/{{ item }}"
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - 01-seccomp.conf
+  tags:
+    - install
+    - cri
+  notify:
+    - Restart CRI-O
+
+- name: "Configure CRI-O: Add HTTP Proxy"
+  blockinfile:
+    dest: /etc/sysconfig/crio
+    create: yes
+    mode: 0644
+    block: |
+      {% if http_proxy.enabled %}
+      http_proxy="{{ http_proxy.url }}"
+      {% if https_proxy.url is defined %}
+      https_proxy="{{ https_proxy.url }}"
+      {% else %}
+      https_proxy="{{ http_proxy.url }}"
+      {% endif %}
+      no_proxy="
+      {%- for host in groups['k8s'] -%}
+        {%- if hostvars[host]['ansible_eth1'] is defined -%} 
+        {{ hostvars[host]['ansible_eth1']['ipv4']['address'] }}
+        {%- endif -%}
+      {%- if not loop.last %},{% endif -%}
+      {%- endfor -%}
+      ,{{ groups['k8s'] | join(",") -}}
+      {% if http_proxy.no_proxy is defined %}
+      ,{{ http_proxy.no_proxy | unique | join(",")}}"
+      {% else %}
+      "
+      {% endif %}
+      {% endif %}
+  tags:
+    - http_proxy
+    - install
+    - cri
+  notify:
+    - Restart CRI-O
+
+- name: "Enable CRI-O service"
+  systemd:
+    name: crio
+    daemon_reload: yes
+    state: started
+    enabled: yes
+  tags:
+    - install
+    - cri

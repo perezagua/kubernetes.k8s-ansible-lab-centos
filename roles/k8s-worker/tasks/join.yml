@@ -1,0 +1,35 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: Reset Kubernetes component
+  command: "kubeadm reset --force --cri-socket=unix:/var/run/crio/crio.sock"
+  register: reset_cluster
+  tags:
+    - cluster
+    - join
+- name: Load kubeadm-config template
+  when: reset_cluster is succeeded
+  template:
+    dest: kubeadm-config.yml
+    src: templates/kubeadm-config.yml.j2
+    mode: 0400
+  tags:
+    - cluster
+    - join
+
+- name: keyPaths Fix for K8s version 1.23
+  replace:
+    path: /etc/containers/policy.json
+    regexp: '^.*keyPaths.*'
+    replace: '                    "keyPath": "/etc/pki/rpm-gpg/RPM-GPG-KEY-redhat-release"'
+
+- name: Join the Kubernetes cluster
+  when: reset_cluster is succeeded
+  command: kubeadm join --config kubeadm-config.yml
+  register: join_cluster
+  notify:
+    - Recreate kube-dns
+  tags:
+    - cluster
+    - join

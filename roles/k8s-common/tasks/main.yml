@@ -1,0 +1,71 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: Disable system swap
+  command: "swapoff -a"
+  tags:
+    - preinstall
+    - swap
+
+- name: Remove current swap from fstab
+  lineinfile:
+    dest: /etc/fstab
+    regexp: '(?i)^([^#][\S]+\s+(none|swap)\s+swap.*)'
+    line: '# \1'
+    backrefs: yes
+    state: present
+  tags:
+    - preinstall
+    - swap
+
+# Make sure that the br_netfilter, overlay modules are loaded.
+- name: Enable kernel modules
+  modprobe:
+    state: present
+    name: "{{ item }}"
+    persistent: present
+  with_items:
+    - overlay
+    - br_netfilter
+  tags:
+    - preinstall
+    - kernel
+
+# As a requirement for your Linux Node's iptables 
+# to correctly see bridged traffic, you should ensure: 
+#   - net.bridge.bridge-nf-call-iptables
+#   - net.bridge.bridge-nf-call-ip6tables
+#   - net.bridge.bridge-nf-call-iptables
+# are set to 1 in your sysctl config
+- name: Configure sysctl
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: true
+    sysctl_file: /etc/sysctl.d/k8s.conf
+  with_items:
+    - name: "vm.swappiness"
+      value: "0"
+    - name: "net.bridge.bridge-nf-call-iptables"
+      value: "1"
+    - name: "net.bridge.bridge-nf-call-ip6tables"
+      value: "1"
+    - name: "net.ipv4.ip_forward"
+      value: "1"
+  tags:
+    - preinstall
+    - sysctl
+
+- name: Set firewall rules
+  include_tasks: firewall.yml
+  tags:
+    - preinstall
+    - firewall
+
+- name: Install Kubernetes packages
+  include_tasks: install.yml
+  tags:
+    - install
+    - install_kubernetes

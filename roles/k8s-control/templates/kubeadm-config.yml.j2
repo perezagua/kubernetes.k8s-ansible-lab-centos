@@ -1,0 +1,46 @@
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: InitConfiguration
+bootstrapTokens:
+  - token: "{{ bootstrap_token.stdout | mandatory }}"
+    description: "kubeadm bootstrap token"
+    ttl: "24h"
+nodeRegistration:
+  name: "{{ ansible_hostname }}"
+  criSocket: "unix:/var/run/crio/crio.sock"
+localAPIEndpoint:
+  advertiseAddress: "{{ cp_address }}"
+  bindPort: 6443
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+networking:
+  serviceSubnet: "{{ service_cidr }}"
+  podSubnet: "{{ pod_network_cidr }}"
+  dnsDomain: "cluster.local"
+apiServer:
+    extraArgs:
+      oidc-issuer-url: https://auth.k8s.in.rdlabs.hpecorp.net
+      oidc-client-id: f7fc631bf415c41249a039e2663149eddf9d2dbd
+      oidc-username-claim: email
+      oidc-groups-claim: groups
+      oidc-ca-file: /pki/HPE_PrivateRootCA.pem
+    extraVolumes:
+      - name: pki
+        hostPath: /etc/pki/ca-trust/source/anchors
+        mountPath: /pki
+        readOnly: true
+kubernetesVersion: "v{{ k8s_version }}"
+controlPlaneEndpoint: "{{ cp_dns_name }}:6443"
+clusterName: "k8s.ctg-did-rnd"
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+clusterDomain: cluster.local
+systemReserved:
+  cpu: 250m
+  memory: 256Mi
+kubeReserved:
+  cpu: 250m
+  memory: 256Mi

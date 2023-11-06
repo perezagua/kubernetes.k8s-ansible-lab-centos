@@ -1,0 +1,22 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+#
+# {{ ansible_managed }}
+#
+{% if http_proxy.enabled %}
+export http_proxy="{{ http_proxy.url }}"
+{% if https_proxy.url is defined %}
+export https_proxy="{{ https_proxy.url }}"
+{% else %}
+export https_proxy="{{ http_proxy.url }}"
+{% endif %}
+export no_proxy="{% for host in groups['k8s'] -%}
+  {{ hostvars[host]['ansible_eth1']['ipv4']['address'] }},{{ host }}
+{%- if not loop.last %},{% endif -%}
+{%- endfor -%}
+{% if http_proxy.no_proxy is defined %}
+,{{ http_proxy.no_proxy | unique | join(",") -}}
+{% else %}
+{% endif %}
+"
+{% endif %}

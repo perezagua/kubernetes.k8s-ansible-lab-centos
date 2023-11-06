@@ -1,0 +1,22 @@
+---
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: JoinConfiguration
+discovery:
+  bootstrapToken:
+    token: {{ hostvars['k8s_token_holder'].token }}
+    apiServerEndpoint: {{ cp_dns_name }}:6443
+    caCertHashes:
+      - sha256:{{hostvars['k8s_token_holder'].ca_hash}}
+nodeRegistration:
+  name: "{{ ansible_hostname }}"
+  criSocket: "unix:/var/run/crio/crio.sock"
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+systemReserved:
+  cpu: 250m
+  memory: 256Mi
+kubeReserved:
+  cpu: 250m
+  memory: 256Mi

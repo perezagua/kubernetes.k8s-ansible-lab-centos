@@ -1,0 +1,41 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: Update required packages
+  dnf:
+    name: iptables
+    state: latest
+    update_cache: yes
+  tags:
+    - cni
+
+- name: Check if NetworkManager is installed
+  package_facts:
+    manager: auto
+  tags:
+    - cni
+
+- name: Print packages installed
+  debug:
+    var: ansible_facts.packages
+
+- name: Configure NetworkManager
+  copy:
+    src: files/network-manager-calico.conf
+    dest: /etc/NetworkManager/conf.d/calico.conf
+    mode: 0644
+  tags:
+    - cni
+  when: '"network-manager" in ansible_facts.packages'
+  notify:
+    - Restart NetworkManager
+
+- name: Configure Control Plane Calico Node
+  when: "'k8s_control' in group_names"
+  include_tasks: install_calico.yml
+  tags:
+    - configure_cni
+    - cni
+    - bgp
+    - calicoctl

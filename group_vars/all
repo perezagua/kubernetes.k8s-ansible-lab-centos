@@ -1,0 +1,14 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+cp_dns_name: "cp.k8s.in.rdlabs.hpecorp.net"
+
+http_proxy:
+  enabled: false
+  url: "http://web-proxy.sgp.hpecorp.net:8080"
+  no_proxy:
+    - "127.0.0.1"
+    - "localhost"
+    - ".cluster.local"
+    - "10.96.0.1" # The k8s-apiserver endpoint, required for CRI-O CNI, which also requires HTTP Proxy
+    - "{{ cp_dns_name }}"

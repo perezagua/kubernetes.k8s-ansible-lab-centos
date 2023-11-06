@@ -1,0 +1,84 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: "Enable kubelet service"
+  systemd:
+    name: kubelet
+    daemon_reload: yes
+    state: started
+    enabled: yes
+  tags:
+    - cluster
+    - kubelet
+
+- name: Check if kubeadm has already run
+  stat:
+    path: "/etc/kubernetes/pki/ca.key"
+  register: kubeadm_ca
+  tags:
+    - cluster
+    - bootstrap
+
+- name: Init cluster if needed
+  include_tasks: cluster_bootstrap.yml
+  when: not kubeadm_ca.stat.exists
+  run_once: true
+  tags:
+    - cluster
+    - bootstrap
+
+- name: Create Kubernetes configuration directory
+  file:
+    path: ".kube/"
+    state: directory
+    owner: "{{ ansible_user | default(ansible_user_id) }}"
+    group: "{{ ansible_user | default(ansible_user_id) }}"
+  tags:
+    - cluster
+    - bootstrap
+
+- name: "Copy admin.conf to $HOME directory"
+  copy:
+    src: "/etc/kubernetes/admin.conf"
+    dest: ".kube/config"
+    owner: "{{ ansible_user | default(ansible_user_id) }}"
+    group: "{{ ansible_user | default(ansible_user_id) }}"
+    mode: 0755
+    remote_src: true
+  tags:
+    - cluster
+    - bootstrap
+
+- name: Read Kubernetes PKI CA Hash
+  shell: "openssl x509 -pubkey -in /etc/kubernetes/pki/ca.crt | openssl rsa -pubin -outform der 2>/dev/null | openssl dgst -sha256 -hex | sed 's/^.* //'"
+  register: ca_hash
+  tags:
+    - cluster
+    - bootstrap
+
+- name: Log Kubernetes PKI CA Hash
+  when: ca_hash is defined
+  debug:
+    msg: "Kubernetes PKI CA Hash: {{ ca_hash.stdout }}."
+  tags:
+    - cluster
+    - bootstrap
+
+- name: Register bootstrap token for worker configuration
+  when: bootstrap_token is defined
+  add_host:
+    name: "k8s_token_holder"
+    token: "{{ bootstrap_token.stdout }}"
+    ca_hash: "{{ ca_hash.stdout }}"
+  tags:
+    - cluster
+    - bootstrap
+
+- name: Install Kubernetes Namespace Switcher (kns)
+  shell: |
+    curl https://raw.githubusercontent.com/blendle/kns/master/bin/kns -o /usr/local/bin/kns 
+    chmod +x /usr/local/bin/kns
+  tags:
+    - cluster
+    - bootstrap

@@ -1,0 +1,61 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: Install Tigera Operator
+  become: false
+  command: kubectl create -f https://raw.githubusercontent.com/projectcalico/calico/{{ calico_version }}/manifests/tigera-operator.yaml
+  tags:
+    - cni
+    - install_operator
+
+- name: Install calicoctl
+  get_url:
+    url: https://github.com/projectcalico/calico/releases/latest/download/calicoctl-linux-amd64
+    dest: /usr/local/bin/kubectl-calico
+    mode: 777
+  tags:
+    - cni
+    - calicoctl
+
+- name: Load Calico configuration template
+  template:
+    dest: calico-configuration.yml
+    src: templates/calico-config.yml.j2
+    mode: 0644
+  tags:
+    - cni
+    - configure_cni
+  register: calico_template
+
+- name: Configure Calico
+  become: false
+  command: kubectl apply -f calico-configuration.yml
+  when: calico_template.changed
+  tags:
+    - cni
+    - configure_cni
+
+- name: Load BGP templates
+  template:
+    src: "templates/{{ item }}.j2"
+    dest: "{{ item }}"
+    mode: 0644
+  with_items:
+    - calico-bgp-config.yml
+  tags:
+    - cni
+    - bgp
+    - configure_cni
+  register: bgp_template
+
+- name: Configure BGP
+  become: false
+  command: "kubectl calico apply -f {{ item }}"
+  when: bgp_template.changed
+  with_items:
+    - calico-bgp-config.yml
+  tags:
+    - cni
+    - bgp
+    - configure_cni

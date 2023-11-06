@@ -1,0 +1,17 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+dependencies:
+  - role: k8s-common
+    kubernetes_packages:
+      - kubelet
+      - kubeadm
+      - kubectl
+    firewall_ports:
+      - 6443
+      - 2379-2380
+      - 10250
+      - 10251
+      - 10252
+  - role: k8s-cri

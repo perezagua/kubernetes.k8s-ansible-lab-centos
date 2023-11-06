@@ -1,0 +1,26 @@
+# Copyright 2023 Hewlett-Packard Enterprise Development LP.
+# All rights reserved.
+
+---
+- name: "Enable kubelet service"
+  systemd:
+    name: kubelet
+    daemon_reload: yes
+    state: started
+    enabled: yes
+  tags:
+    - cluster
+    - kubelet
+- name: Check if kubelet.conf exists
+  stat:
+    path: "/etc/kubernetes/kubelet.conf"
+  register: kubelet_conf
+  tags:
+    - cluster
+    - join
+- name: "Join cluster if needed"
+  include_tasks: join.yml
+  when: not kubelet_conf.stat.exists
+  tags:
+    - cluster
+    - join

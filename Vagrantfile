@@ -13,6 +13,7 @@ Vagrant.configure("2") do |config|
     master.vm.hostname = "master-node"
     master.vm.network "private_network", ip: IP_NW + "#{IP_START}", hostname: true
     master.vm.network "forwarded_port", guest: 22, host: 2220, id: "ssh"
+    master.vm.network "forwarded_port", guest: 32567, host: 32567, id: "nodePort"
     master.vm.provider "vmware_desktop" do |vb|
       vb.vmx["memsize"] = "4096"
       vb.vmx["numvcpus"] = "2"
